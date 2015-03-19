@@ -357,6 +357,7 @@ static void sc_usage(void)
 	BIO_printf(bio_err," -tlsextdebug      - hex dump of all TLS extensions received\n");
 	BIO_printf(bio_err," -status           - request certificate status from server\n");
 	BIO_printf(bio_err," -no_ticket        - disable use of RFC4507bis session tickets\n");
+	BIO_printf(bio_err," -cutthrough       - enable 1-RTT full-handshake for strong ciphers\n");
 # ifndef OPENSSL_NO_NEXTPROTONEG
 	BIO_printf(bio_err," -nextprotoneg arg - enable NPN extension, considering named protocols supported (comma-separated list)\n");
 # endif
@@ -577,6 +578,7 @@ int MAIN(int argc, char **argv)
 	EVP_PKEY *key = NULL;
 	char *CApath=NULL,*CAfile=NULL,*cipher=NULL;
 	int reconnect=0,badop=0,verify=SSL_VERIFY_NONE,bugs=0;
+	int cutthrough=0;
 	int crlf=0;
 	int write_tty,read_tty,write_ssl,read_ssl,tty_on,ssl_pending;
 	SSL_CTX *ctx=NULL;
@@ -883,6 +885,8 @@ int MAIN(int argc, char **argv)
 			}
 # endif
 #endif
+		else if (strcmp(*argv,"-cutthrough") == 0)
+			cutthrough=1;
 		else if (strcmp(*argv,"-serverpref") == 0)
 			off|=SSL_OP_CIPHER_SERVER_PREFERENCE;
 		else if (strcmp(*argv,"-legacy_renegotiation") == 0)
@@ -1152,6 +1156,15 @@ bad:
 	 * Setting read ahead solves this problem.
 	 */
 	if (socket_type == SOCK_DGRAM) SSL_CTX_set_read_ahead(ctx, 1);
+
+	/* Enable handshake cutthrough for client connections using
+	 * strong ciphers. */
+	if (cutthrough)
+		{
+		int ssl_mode = SSL_CTX_get_mode(ctx);
+		ssl_mode |= SSL_MODE_HANDSHAKE_CUTTHROUGH;
+		SSL_CTX_set_mode(ctx, ssl_mode);
+		}
 
 #if !defined(OPENSSL_NO_TLSEXT) && !defined(OPENSSL_NO_NEXTPROTONEG)
 	if (next_proto.data)
@@ -2030,6 +2043,7 @@ static void print_stuff(BIO *bio, SSL *s, int full)
 			BIO_number_written(SSL_get_wbio(s)));
 		}
 	BIO_printf(bio,(SSL_cache_hit(s)?"---\nReused, ":"---\nNew, "));
+
 	c=SSL_get_current_cipher(s);
 	BIO_printf(bio,"%s, Cipher is %s\n",
 		SSL_CIPHER_get_version(c),
@@ -2041,6 +2055,29 @@ static void print_stuff(BIO *bio, SSL *s, int full)
 							 EVP_PKEY_bits(pktmp));
 		EVP_PKEY_free(pktmp);
 	}
+
+	//SERHAT
+	int session_resumption = SSL_cache_hit(s);
+	if(session_resumption == 1)
+	{
+		printf("SERHAT: TLS session resumption supported\n");
+	}
+	else
+	{
+		printf("SERHAT: TLS session resumption NOT supported\n");
+	}
+
+	//SERHAT
+	int false_start = SSL_cutthrough_complete(s);
+	if(false_start == 1)
+	{
+		printf("SERHAT: TLS false start supported\n");
+	}
+	else
+	{
+		printf("SERHAT: TLS false start NOT supported\n");
+	}
+
 	BIO_printf(bio, "Secure Renegotiation IS%s supported\n",
 			SSL_get_secure_renegotiation_support(s) ? "" : " NOT");
 #ifndef OPENSSL_NO_COMP

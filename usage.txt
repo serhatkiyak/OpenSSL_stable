@@ -1,0 +1,6 @@
+
+TO TEST TLS SESSION RESUMPTION:
+./openssl s_client -connect www.google.com:443 -reconnect
+
+TO TEST TLS FALSE START:
+./openssl s_client -connect www.google.com:443 -cutthrough
