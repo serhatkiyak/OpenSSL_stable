@@ -1,0 +1,6 @@
+The experiment scripts depend on the web-profiler module
+(https://github.com/dtnaylor/web-profiler). web-profiler has been added as a
+submodule to this repository; to load it, run:
+
+git submodule init
+git submodule update
