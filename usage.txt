@@ -1,4 +1,10 @@
 
+./config -d
+make depend
+make
+make test
+make install_sw
+
 TO TEST TLS SESSION RESUMPTION:
 ./openssl s_client -connect www.google.com:443 -reconnect
 
